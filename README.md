@@ -1,6 +1,6 @@
 # Launch Checker
-A simple implementation of JX3 open service monitoring, prompt by msgbox .
+JX3 service launch checker .
 ## Quick Start
 ```bash
-python launcher_checker 梦江南 乾坤一掷
+python launch_checker.py
 ```

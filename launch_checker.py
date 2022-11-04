@@ -1,79 +1,127 @@
 import asyncio
-import ctypes
 from contextlib import closing, suppress
-from datetime import datetime
-from typing import List
+from typing import Any, Dict
 from urllib.request import urlopen
 
+from fastapi import FastAPI
 
-async def socket_connector(host: str, port: str, timeout: int = 3) -> bool:
-    with suppress(Exception):
-        _, w = await asyncio.wait_for(
-            asyncio.open_connection(host, port), timeout=timeout
-        )
-        w.close()
-        return True
-    return False
+app = FastAPI()
+
+servers = []
+server_map = {}
 
 
-async def check(
-    server: str, host: str, port: str, *, timeout: int = 3
-) -> None:
+async def check(host: str, port: str, *, timeout: int = 3) -> None:
+    async def socket_connector(host: str, port: str, timeout: int = 3) -> bool:
+        with suppress(Exception):
+            _, w = await asyncio.wait_for(
+                asyncio.open_connection(host, port), timeout=timeout
+            )
+            w.close()
+            return True
+        return False
+
     while True:
         if await socket_connector(host=host, port=port, timeout=timeout):
-            # Launched
-            await asyncio.to_thread(msg_box, server)
-            return
+            server_map[(host, port)] = True
+            await asyncio.sleep(60)
+            continue
+
+        server_map[(host, port)] = False
+
+        while True:
+            if await socket_connector(host=host, port=port, timeout=timeout):
+                server_map[(host, port)] = True
+                break
 
 
-def check_verson() -> str:
-    with closing(
-        urlopen(
-            "https://jx3hdv4.autoupdate.kingsoft.com"
-            "/jx3hd_v4/zhcn_hd/autoupdateentry.txt"
-        )
-    ) as resp:
-        return resp.read().decode("utf-8").splitlines()[1].split("=")[1]
-
-
-def msg_box(server: str) -> None:
-    ctypes.windll.user32.MessageBoxW(
-        0,
-        f"{datetime.now():%F %H:%M:%S}\n {server} 已开服！！\n"
-        f"当前客户端版本: {check_verson()}",
-        f"{server} 已开服！！",
-        0,
-    )
-
-
-async def main(servers: List[str]) -> None:
-    server_set = set()
-
+async def main() -> None:
     with closing(
         urlopen(
             "http://jx3comm.xoyocdn.com"
             "/jx3hd/zhcn_hd/serverlist/serverlist.ini"
         )
     ) as resp:
-        server_list = resp.read().decode("gbk").splitlines()
+        for lines in resp.readlines():
+            line = lines.decode("gbk").split("\t")
+            servers.append(
+                {
+                    "zoneName": line[11],
+                    "server": line[1],
+                    "ipAddress": line[3],
+                    "ipPort": line[4],
+                    "mainServer": line[10],
+                }
+            )
+            server_map[(line[3], line[4])] = False
 
-    tasks = []
+    with closing(
+        urlopen(
+            "http://jx3clc-autoupdate.xoyocdn.com"
+            "/jx3classic_v4/classic_yq/serverlist/serverlist.ini"
+        )
+    ) as resp:
+        for lines in resp.readlines():
+            line = lines.decode("gbk").split("\t")
+            servers.append(
+                {
+                    "zoneName": line[11],
+                    "server": line[1],
+                    "ipAddress": line[3],
+                    "ipPort": line[4],
+                    "mainServer": line[10],
+                }
+            )
+            server_map[(line[3], line[4])] = False
 
-    for line in server_list:
-        _, server, _, host, port, *_ = line.split("\t")
-        if server in servers and server not in server_set:
-            server_set.add(server)
-            tasks.append((server, host, port))
+    with closing(
+        urlopen(
+            "http://jx3clc-autoupdate.xoyocdn.com"
+            "/jx3classic_v4/classic_yq/serverlist/serverlist.ini"
+        )
+    ) as resp:
+        for lines in resp.readlines():
+            line = lines.decode("gbk").split("\t")
+            servers.append(
+                {
+                    "zoneName": "國際服",
+                    "server": line[1],
+                    "ipAddress": line[3],
+                    "ipPort": line[4],
+                    "mainServer": line[1],
+                }
+            )
+            server_map[(line[3], line[4])] = False
 
-    await asyncio.gather(*[check(*server) for server in tasks])
+    await asyncio.gather(
+        *[check(host=server[0], port=server[1]) for server in server_map]
+    )
+
+
+@app.on_event("startup")
+async def startup():
+    asyncio.create_task(main())
+
+
+@app.get("/")
+async def launch() -> Dict[str, Any]:
+    return {
+        "code": 0,
+        "msg": "success",
+        "tag": "GetZoneInfo",
+        "data": [
+            server
+            | {
+                "connectState": server_map[
+                    (server["ipAddress"], server["ipPort"])
+                ]
+            }
+            for server in servers
+        ],
+    }
 
 
 if __name__ == "__main__":
-    import argparse
+    import uvicorn
 
-    parser = argparse.ArgumentParser("launch checker")
-    parser.add_argument("server", type=str, nargs="*")
-
-    args = parser.parse_args()
-
-    asyncio.run(main(args.server))
+    uvicorn.run("launch_checker:app", host="0.0.0.0", port=80)
