@@ -66,7 +66,7 @@ async def main() -> None:
             servers.append(
                 {
                     "zoneName": line[11],
-                    "server": line[1],
+                    "serverName": line[1],
                     "ipAddress": line[3],
                     "ipPort": line[4],
                     "mainServer": line[10],
