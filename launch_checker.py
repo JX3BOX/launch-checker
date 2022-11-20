@@ -47,7 +47,7 @@ async def main() -> None:
             servers.append(
                 {
                     "zoneName": line[11],
-                    "server": line[1],
+                    "serverName": line[1],
                     "ipAddress": line[3],
                     "ipPort": line[4],
                     "mainServer": line[10],
@@ -85,7 +85,7 @@ async def main() -> None:
             servers.append(
                 {
                     "zoneName": "國際服",
-                    "server": line[1],
+                    "serverName": line[1],
                     "ipAddress": line[3],
                     "ipPort": line[4],
                     "mainServer": line[1],
@@ -103,7 +103,7 @@ async def startup():
     asyncio.create_task(main())
 
 
-@app.get("/")
+@app.get("/server")
 async def launch() -> Dict[str, Any]:
     return {
         "code": 0,
