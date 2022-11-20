@@ -1,0 +1,40 @@
+name: Publish Aliyun ACR
+
+# on:
+#   release:
+#     types: [published]
+on:
+  push:
+    # branches:
+    #   - 'master'
+    tags:
+      - 'v*'
+#   pull_request:
+    # branches:
+    #   - 'master'
+
+jobs:
+  push_to_registries:
+    name: Push Docker image to github container
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Login to ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: https://registry.cn-hangzhou.aliyuncs.com
+          username: "${{ secrets.REGISTRY_USERNAME }}"
+          password: "${{ secrets.REGISTRY_PASSWORD }}"
+
+      - name: Build and push image
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest .
+          docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest
