@@ -24,3 +24,5 @@ docker container rm jx3box-spider;
 docker pull registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest;
 docker container run -dt --name jx3box-spider -p 11003:11003 --restart=always --network cms registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest;
 ```
+
+ansible远程部署： https://github.com/JX3BOX/docker-deploy/blob/master/README.md
