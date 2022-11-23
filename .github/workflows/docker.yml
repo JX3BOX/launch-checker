@@ -37,4 +37,6 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest .
+          docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref}} .
           docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest
+          docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref}}
