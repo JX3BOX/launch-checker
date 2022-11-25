@@ -37,6 +37,17 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest .
-          docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref}} .
+          docker build -t registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref_name}} .
           docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:latest
-          docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref}}
+          docker push registry.cn-hangzhou.aliyuncs.com/jx3box/jx3box-spider:${{github.ref_name}}
+  deploy:
+    needs: push_to_registries
+    name: 触发docker部署任务
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.ACCESS_TOKEN }}
+          repository: JX3BOX/docker-deploy
+          event-type: deploy_spider2
+          client-payload: '{"dockerTag": "${{ github.ref_name }}"}'
